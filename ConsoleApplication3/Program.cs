@@ -46,20 +46,33 @@ namespace ConsoleApplication3
                 IEnumerable<Project> groupProjects =
                     from proj in projects
                     where (
-                        proj.manager == "Irina Zakharova" ||
+                        (proj.manager == "Irina Zakharova" ||
                         proj.manager == "Nikita Maynagashev" ||
                         proj.manager == "Karolina Shelepova" ||
                         proj.manager == "Margarita Kovalevskaya" ||
-                        proj.manager == "Irina Min"
+                        proj.manager == "Irina Min") &&
+                        proj.groupServices == "Editing" &&
+                        proj.unit == "words"
                     )
                     select proj;
 
-                IEnumerable<Project> editGroupProjects =
+                IEnumerable<DateTime> assignedDates =
                     from proj in groupProjects
-                    where proj.groupServices == "Editing"
-                    select proj;
+                    select proj.assigned;
 
+                DateTime minAssigned = assignedDates.Min();
 
+                IEnumerable<DateTime> deadlines =
+                    from proj in groupProjects
+                    select proj.deadline;
+
+                DateTime maxDeadline = deadlines.Max();
+
+                for (DateTime i = minAssigned; i < maxDeadline; i.AddDays(1)) 
+                {
+                       
+                }
+                        
             }
         }
     }
