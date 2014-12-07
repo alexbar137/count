@@ -68,11 +68,25 @@ namespace ConsoleApplication3
 
                 DateTime maxDeadline = deadlines.Max();
 
-                for (DateTime i = minAssigned; i < maxDeadline; i.AddDays(1)) 
-                {
-                       
-                }
-                        
+               DateTime i = minAssigned;
+
+               List<ProjectCalendar> calend = new List<ProjectCalendar>();
+
+               while (i < maxDeadline)
+               {
+                   ProjectCalendar day = new ProjectCalendar();
+                   day.day = i;
+
+                   IEnumerable<Project> dayProjects =
+                       from proj in groupProjects
+                       where ((proj.assigned <= i) &&
+                       (proj.deadline >= i))
+                       select proj;
+
+                   day.projects = dayProjects.ToList<Project>();
+                   calend.Add(day);
+                   i = i.AddDays(1);
+               }     
             }
         }
     }
@@ -107,32 +121,34 @@ namespace ConsoleApplication3
             Row headingsRow = dataRows.First();
 
             IEnumerable<string> headings = Project.ParseRow(headingsRow, sharedStrings);
-            Array headingsArray = headings.ToArray();
+
+            ProjectStrings projectStrings = new ProjectStrings();
+            projectStrings.headings = headings.ToArray();
 
            
-            IEnumerable<Row> projectRows =
+           projectStrings.projectRows =
                 from dataRow in dataRows
                 where dataRow.RowIndex > 1
                 select dataRow;
 
-            foreach (Row dataRow in projectRows)
+            foreach (Row dataRow in projectStrings.projectRows)
             {
                 Project prj = new Project();
-                IEnumerable<string> textValues = Project.ParseRow(dataRow, sharedStrings);
+                projectStrings.textValues = Project.ParseRow(dataRow, sharedStrings);
 
                 try
                 {
-                    prj.jobCode = textValues.ElementAt(Array.IndexOf(headingsArray, "Job Code"));
-                    prj.jobName = textValues.ElementAt(Array.IndexOf(headingsArray, "Job Name"));
-                    prj.expert = textValues.ElementAt(Array.IndexOf(headingsArray, "Expert"));
-                    prj.projectCode = textValues.ElementAt(Array.IndexOf(headingsArray, "Project Code"));
-                    prj.assigned = DateTime.FromOADate(double.Parse(textValues.ElementAt(Array.IndexOf(headingsArray, "Assigned")), System.Globalization.CultureInfo.InvariantCulture));
-                    prj.deadline = DateTime.FromOADate(double.Parse(textValues.ElementAt(Array.IndexOf(headingsArray, "Deadline")), System.Globalization.CultureInfo.InvariantCulture));
-                    prj.completed = DateTime.FromOADate(double.Parse(textValues.ElementAt(Array.IndexOf(headingsArray, "Completed")), System.Globalization.CultureInfo.InvariantCulture));
-                    prj.groupServices = textValues.ElementAt(Array.IndexOf(headingsArray, "Group of Services"));
-                    prj.volume = Double.Parse(textValues.ElementAt(Array.IndexOf(headingsArray, "Volume")), System.Globalization.CultureInfo.InvariantCulture);
-                    prj.unit = textValues.ElementAt(Array.IndexOf(headingsArray, "Units"));
-                    prj.manager = textValues.ElementAt(Array.IndexOf(headingsArray, "Project Manager"));
+                    prj.jobCode = projectStrings.ParseText("Job Code");
+                    prj.jobName = projectStrings.ParseText("Job Name");
+                    prj.expert = projectStrings.ParseText("Expert");
+                    prj.projectCode = projectStrings.ParseText("Project Code");
+                    prj.assigned = projectStrings.ParseDate("Assigned");
+                    prj.deadline = projectStrings.ParseDate("Deadline");
+                    prj.completed = projectStrings.ParseDate("Completed");
+                    prj.groupServices = projectStrings.ParseText("Group of Services");
+                    prj.volume = projectStrings.ParseDouble("Volume");
+                    prj.unit = projectStrings.ParseText("Units");
+                    prj.manager = projectStrings.ParseText("Project Manager");
                     prj.duration = prj.deadline - prj.assigned;
                     prj.days = prj.duration.TotalDays;
                     prj.productivity = prj.volume / prj.days;
@@ -161,6 +177,70 @@ namespace ConsoleApplication3
                      dataCell.CellValue.InnerText);
             return result;
         }
+
+        
+    }
+
+    //Used to parse row data
+    class ProjectStrings
+    {
+        public Array headings { get; set; }
+        public IEnumerable<Row> projectRows { get; set; }
+        public IEnumerable<string> textValues { get; set; }
+
+        public string ParseText (string arg)
+        {
+            string result = textValues.ElementAt(Array.IndexOf(headings, arg));
+            return result;
+        }
+
+        public DateTime ParseDate (string arg)
+        {
+            DateTime result = DateTime.FromOADate(ParseDouble(arg));
+            return result;
+        }
+
+        public double ParseDouble (string arg)
+        {
+            double result = Double.Parse(textValues.ElementAt(Array.IndexOf(headings, arg)), System.Globalization.CultureInfo.InvariantCulture);
+            return result;
+        }
+
+    }
+
+
+    class ProjectCalendar
+    {
+        public DateTime day { get; set; }
+        private List<Project> _projects;
+        public List<Project> projects 
+        { get
+            {
+                return _projects;
+            }
+          set
+            {
+                _projects = value;
+                workload = 0;
+                foreach (Project proj in _projects)
+                {
+                    workload += proj.productivity;
+                }
+            }
+        }
+        public double workload
+        {
+            get;
+            private set;
+        }
+
+        public void AddProj (Project proj)
+        {
+            projects.Add(proj);
+            workload += proj.productivity;
+        }
+
+
         
     }
 }
